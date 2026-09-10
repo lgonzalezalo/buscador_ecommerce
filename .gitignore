@@ -1,0 +1,16 @@
+# Entorno virtual de Python
+venv/
+__pycache__/
+*.pyc
+
+# Índices generados (se regeneran con build_index.py, no deben versionarse)
+index_vectors.npy
+index_meta.json
+*_vectors.npy
+*_meta.json
+
+# Archivos de sistema
+.DS_Store
+
+# Variables de entorno / secretos
+.env
