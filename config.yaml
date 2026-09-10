@@ -1,0 +1,59 @@
+# config.yaml
+# ------------
+# Configuración centralizada del proyecto. build_index.py y search.py
+# leen este mismo fichero, para garantizar que ambos usan siempre el
+# mismo modelo de embeddings (si divergieran, los vectores generados en
+# la indexación dejarían de ser comparables con los de la búsqueda).
+
+ollama:
+  url: "http://localhost:11434/api/embeddings"
+  model: "bge-m3"
+
+# Pesos por defecto del boost léxico por campo. Se pueden sobrescribir
+# puntualmente por línea de comandos (--peso-nombre, etc.) sin tocar
+# este fichero.
+pesos:
+  nombre: 1.0
+  descripcion: 0.5
+  categoria: 0.3
+
+spellcheck:
+  # Umbral de similitud (0-1) para aceptar una corrección ortográfica
+  # automática. Más alto = más estricto (menos correcciones, menos
+  # falsos positivos como "cena" -> "cadena").
+  cutoff: 0.87
+
+tokenizacion:
+  # Palabras más cortas que esto se ignoran (salvo que estén en la
+  # lista de negadores). Es una red de seguridad adicional a STOPWORDS.
+  longitud_minima_palabra: 2
+
+  # Palabras funcionales sin significado propio para buscar productos.
+  # Ojo: "con" y "sin" NO están aquí a propósito, porque pueden formar
+  # parte de nombres de producto reales ("sudadera con capucha").
+  stopwords:
+    - de
+    - del
+    - la
+    - el
+    - los
+    - las
+    - un
+    - una
+    - unos
+    - unas
+    - por
+    - para
+    - en
+    - y
+    - o
+    - a
+    - al
+    - es
+    - su
+    - sus
+
+  # Palabras que indican negación/exclusión ("sin X", "no X").
+  negadores:
+    - sin
+    - no
