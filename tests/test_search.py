@@ -58,6 +58,20 @@ CATALOGO_PRUEBA = [
         "categoria_nivel3": "Robots aspiradores", "categoria_nivel4": "Robot aspirador",
         "precio": "250.00", "stock": "Yes", "descuento": "10", "marca": "HogarTech",
     },
+    {
+        "sku": "ROP-000003", "nombre": "Camiseta básica algodón manga corta verde oliva",
+        "descripcion": "Camiseta de algodón 100% suave y transpirable.",
+        "categoria_nivel1": "Ropa", "categoria_nivel2": "Hombre",
+        "categoria_nivel3": "Camisetas", "categoria_nivel4": "Camiseta manga corta",
+        "precio": "5.83", "stock": "Yes", "descuento": "0", "marca": "TelaViva",
+    },
+    {
+        "sku": "ROP-000004", "nombre": "Camiseta básica algodón manga corta blanca",
+        "descripcion": "Camiseta de algodón 100% suave y transpirable.",
+        "categoria_nivel1": "Ropa", "categoria_nivel2": "Hombre",
+        "categoria_nivel3": "Camisetas", "categoria_nivel4": "Camiseta manga corta",
+        "precio": "9.99", "stock": "Yes", "descuento": "0", "marca": "UrbanCotto",
+    },
 ]
 
 
@@ -172,6 +186,19 @@ class TestNegacion(unittest.TestCase):
         _, excluir = search.extraer_exclusiones("pendientes sin aros", CATALOGO_PRUEBA)
         self.assertTrue(search.producto_excluido(CATALOGO_PRUEBA[0], excluir))  # pendientes de aro
         self.assertFalse(search.producto_excluido(CATALOGO_PRUEBA[1], excluir))  # pendientes de perla
+
+    def test_negacion_con_no_excluye_color(self):
+        # "no" es el caso que PyYAML 1.1 convierte en False si va sin comillas
+        # en config.yaml: la query debe excluir verde, no buscarlo.
+        query_positiva, excluir = search.extraer_exclusiones(
+            "camiseta no verde", CATALOGO_PRUEBA
+        )
+        self.assertEqual(query_positiva, "camiseta")
+        self.assertIn("verde", excluir)
+        camiseta_verde = next(p for p in CATALOGO_PRUEBA if p["sku"] == "ROP-000003")
+        camiseta_blanca = next(p for p in CATALOGO_PRUEBA if p["sku"] == "ROP-000004")
+        self.assertTrue(search.producto_excluido(camiseta_verde, excluir))
+        self.assertFalse(search.producto_excluido(camiseta_blanca, excluir))
 
 
 class TestBuscarRankingDosNiveles(unittest.TestCase):

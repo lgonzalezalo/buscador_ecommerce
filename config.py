@@ -22,6 +22,27 @@ import yaml
 
 RUTA_POR_DEFECTO = Path(__file__).resolve().parent / "config.yaml"
 
+# PyYAML usa YAML 1.1: 'no', 'y', 'on', 'off' se leen como booleanos.
+# Eso rompe listas de palabras en español (negador "no", stopword "y").
+# Copiamos los resolvers del SafeLoader y quitamos solo el de bool, para
+# que 'no' y 'y' sigan siendo texto aunque vayan sin comillas en el YAML.
+class _LoaderSinBoolsImplicitos(yaml.SafeLoader):
+    pass
+
+
+_LoaderSinBoolsImplicitos.yaml_implicit_resolvers = {
+    ch: list(resolvers)
+    for ch, resolvers in yaml.SafeLoader.yaml_implicit_resolvers.items()
+}
+for _ch in list(_LoaderSinBoolsImplicitos.yaml_implicit_resolvers):
+    _LoaderSinBoolsImplicitos.yaml_implicit_resolvers[_ch] = [
+        (tag, regexp)
+        for tag, regexp in _LoaderSinBoolsImplicitos.yaml_implicit_resolvers[_ch]
+        if tag != "tag:yaml.org,2002:bool"
+    ]
+    if not _LoaderSinBoolsImplicitos.yaml_implicit_resolvers[_ch]:
+        del _LoaderSinBoolsImplicitos.yaml_implicit_resolvers[_ch]
+
 VALORES_POR_DEFECTO = {
     "ollama": {
         "url": "http://localhost:11434/api/embeddings",
@@ -70,6 +91,6 @@ def cargar_config(ruta=None) -> dict:
         return VALORES_POR_DEFECTO
 
     with open(ruta, encoding="utf-8") as f:
-        contenido = yaml.safe_load(f) or {}
+        contenido = yaml.load(f, Loader=_LoaderSinBoolsImplicitos) or {}
 
     return _fusionar(VALORES_POR_DEFECTO, contenido)
