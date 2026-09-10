@@ -45,7 +45,8 @@ tokenizacion:
     - por
     - para
     - en
-    - y
+    # "y" entrecomillado: PyYAML (YAML 1.1) interpreta y/yes/no/on/off como booleanos.
+    - "y"
     - o
     - a
     - al
@@ -54,6 +55,8 @@ tokenizacion:
     - sus
 
   # Palabras que indican negación/exclusión ("sin X", "no X").
+  # "no" entrecomillado: sin comillas PyYAML lo lee como false y la negación
+  # deja de funcionar (p. ej. "camiseta no verde" acaba buscando verde).
   negadores:
     - sin
-    - no
+    - "no" # "no" entrecomillado: PyYAML (YAML 1.1) interpreta y/yes/no/on/off como booleanos.
