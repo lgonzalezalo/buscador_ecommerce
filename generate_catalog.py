@@ -1,11 +1,11 @@
 """
 generate_catalog.py
 --------------------
-Genera el catálogo dummy de 2000 productos siguiendo la especificación de
-prompt_catalogo_dummy_ecommerce.md: 4 categorías principales, taxonomía de
-4 niveles, precios por rango, stock, descuentos y marcas ficticias.
+Generates the 2000-product dummy catalog following the spec in
+prompt_catalogo_dummy_ecommerce.md: 4 main categories, a 4-level
+taxonomy, price ranges, stock, discounts, and fictitious brands.
 
-Uso:
+Usage:
     python generate_catalog.py --output catalogo_dummy.csv
 """
 
@@ -13,10 +13,10 @@ import argparse
 import csv
 import random
 
-random.seed(42)  # reproducible
+random.seed(42)  # for reproducibility
 
 # ---------------------------------------------------------------------------
-# Marcas ficticias por categoría principal (8-15 por categoría, reutilizadas)
+# Fictitious brands per main category (8-15 per category, reused across products)
 # ---------------------------------------------------------------------------
 MARCAS = {
     "Alimentación": [
@@ -42,8 +42,8 @@ MARCAS = {
 }
 
 # ---------------------------------------------------------------------------
-# Taxonomía de 4 niveles + plantillas de nombre y variantes por categoría
-# Cada entrada: (nivel2, nivel3, nivel4, plantilla_nombre, [variantes], plantilla_desc)
+# Taxonomy of 4 levels + name templates and variants per category
+# Each entry: (nivel2, nivel3, nivel4, plantilla_nombre, [variantes], plantilla_desc)
 # ---------------------------------------------------------------------------
 TAXONOMIA = {
     "Alimentación": [
@@ -191,7 +191,7 @@ TAXONOMIA = {
     ],
 }
 
-# Prefijos de SKU por categoría
+# SKU prefixes per category
 PREFIJOS = {
     "Alimentación": "ALI",
     "Ropa": "ROP",
@@ -199,7 +199,7 @@ PREFIJOS = {
     "Electrodomésticos": "ELE",
 }
 
-# Rango de precios por categoría (min, max)
+# Price range per category (min, max)
 RANGOS_PRECIO = {
     "Alimentación": (0.50, 30.0),
     "Ropa": (5.0, 200.0),
@@ -207,7 +207,7 @@ RANGOS_PRECIO = {
     "Electrodomésticos": (20.0, 1500.0),
 }
 
-# Reparto de las 2000 filas por categoría principal
+# Distribution of the 2000 rows across main categories
 DISTRIBUCION = {
     "Alimentación": 700,
     "Ropa": 700,

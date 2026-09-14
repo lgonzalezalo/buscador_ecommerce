@@ -1,12 +1,13 @@
 """
 tests/test_search.py
 ---------------------
-Tests de las funciones "puras" de search.py: las que no necesitan llamar
-a Ollama (tokenización, stemming, boost léxico, spellcheck, negación).
+Tests for the "pure" functions of search.py: the ones that don't need
+to call Ollama (tokenization, stemming, lexical boost, spellcheck,
+negation).
 
-Ejecutar con:
+Run with:
     python -m unittest discover -s tests
-o, si tienes pytest instalado:
+or, if you have pytest installed:
     pytest tests/
 """
 
@@ -14,14 +15,14 @@ import sys
 import unittest
 from pathlib import Path
 
-# Permite importar search.py desde la carpeta raíz del proyecto
+# Allows importing search.py from the project's root folder
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import search
 
 
-# Catálogo pequeño de prueba, independiente del catalogo_dummy.csv real,
-# para que los tests sean rápidos y no dependan de datos generados.
+# Small test catalog, independent of the real catalogo_dummy.csv, so
+# tests run fast and don't depend on generated data.
 CATALOGO_PRUEBA = [
     {
         "sku": "JOY-000001", "nombre": "Pendientes de aro minimalistas",
@@ -84,8 +85,8 @@ class TestTokenizar(unittest.TestCase):
         self.assertNotIn("un", palabras)
 
     def test_conserva_con_y_sin(self):
-        # "con" y "sin" deben conservarse: pueden ser parte de un nombre
-        # de producto real (ej. "sudadera con capucha").
+        # "con" and "sin" must be kept: they can be part of a real
+        # product name (e.g. "sudadera con capucha").
         palabras = search.tokenizar("sudadera con capucha")
         self.assertIn("con", palabras)
 
@@ -93,9 +94,45 @@ class TestTokenizar(unittest.TestCase):
         self.assertIn("sin", palabras2)
 
     def test_palabras_cortas_con_significado_se_conservan(self):
-        # "aro" (3 letras) no debe perderse por ser corta.
+        # "aro" (3 letters) must not be dropped just for being short.
         palabras = search.tokenizar("pendientes de aro")
         self.assertIn("aro", palabras)
+
+    def test_ignora_tildes(self):
+        # "joyeria" (no accent) must match "Joyería" (with accent).
+        self.assertEqual(search.tokenizar("joyeria"), search.tokenizar("Joyería"))
+
+    def test_no_confunde_enie_con_vocal_acentuada(self):
+        # "ñ" is a letter in its own right in Spanish, not an accented
+        # vowel: "año" and "ano" must remain different words.
+        self.assertNotEqual(search.tokenizar("año"), search.tokenizar("ano"))
+
+
+class TestNormalizarUnidades(unittest.TestCase):
+
+    def test_variantes_de_gramos_coinciden(self):
+        self.assertEqual(search.tokenizar("250gr"), search.tokenizar("250g"))
+        self.assertEqual(search.tokenizar("250gr"), search.tokenizar("250 gr"))
+        self.assertEqual(search.tokenizar("250gr"), search.tokenizar("250 gramos"))
+
+    def test_variantes_de_litros_coinciden(self):
+        self.assertEqual(search.tokenizar("10l"), search.tokenizar("10L"))
+        self.assertEqual(search.tokenizar("10l"), search.tokenizar("10 litros"))
+
+    def test_variantes_de_miligramos_coinciden(self):
+        self.assertEqual(search.tokenizar("600mg"), search.tokenizar("600 mg"))
+        self.assertEqual(search.tokenizar("600mg"), search.tokenizar("600 miligramos"))
+
+    def test_variantes_de_microgramos_coinciden(self):
+        self.assertEqual(search.tokenizar("25mcg"), search.tokenizar("25 mcg"))
+        self.assertEqual(search.tokenizar("25mcg"), search.tokenizar("25 microgramos"))
+
+    def test_decimales_con_coma_o_punto_coinciden(self):
+        self.assertEqual(search.tokenizar("0.25kg"), search.tokenizar("0,25kg"))
+
+    def test_cantidades_distintas_no_coinciden(self):
+        self.assertNotEqual(search.tokenizar("250g"), search.tokenizar("500g"))
+        self.assertNotEqual(search.tokenizar("250g"), search.tokenizar("250kg"))
 
 
 class TestStemming(unittest.TestCase):
@@ -110,7 +147,7 @@ class TestStemming(unittest.TestCase):
         self.assertIn("luz", search.variantes_stem("luces"))
 
     def test_palabra_corta_no_se_toca(self):
-        # Palabras muy cortas no deberían generar variantes agresivas
+        # Very short words shouldn't produce aggressive variants
         variantes = search.variantes_stem("mes")
         self.assertEqual(variantes, {"mes"})
 
@@ -159,8 +196,8 @@ class TestVocabularioYSpellcheck(unittest.TestCase):
         self.assertIn("capucha", corregida)
 
     def test_no_corrige_palabra_valida_fuera_de_catalogo(self):
-        # "cena" es una palabra española válida que no tiene nada que ver
-        # con el catálogo: no debería "corregirse" a otra cosa.
+        # "cena" is a valid Spanish word that has nothing to do with
+        # the catalog: it shouldn't be "corrected" into something else.
         corregida, cambio = search.corregir_query("cena mejicana", self.vocabulario)
         self.assertFalse(cambio)
         self.assertEqual(corregida, "cena mejicana")
@@ -184,12 +221,12 @@ class TestNegacion(unittest.TestCase):
 
     def test_producto_excluido_correctamente(self):
         _, excluir = search.extraer_exclusiones("pendientes sin aros", CATALOGO_PRUEBA)
-        self.assertTrue(search.producto_excluido(CATALOGO_PRUEBA[0], excluir))  # pendientes de aro
-        self.assertFalse(search.producto_excluido(CATALOGO_PRUEBA[1], excluir))  # pendientes de perla
+        self.assertTrue(search.producto_excluido(CATALOGO_PRUEBA[0], excluir))  # hoop earrings
+        self.assertFalse(search.producto_excluido(CATALOGO_PRUEBA[1], excluir))  # pearl earrings
 
     def test_negacion_con_no_excluye_color(self):
-        # "no" es el caso que PyYAML 1.1 convierte en False si va sin comillas
-        # en config.yaml: la query debe excluir verde, no buscarlo.
+        # "no" is the case PyYAML 1.1 turns into False when unquoted in
+        # config.yaml: the query must exclude green, not search for it.
         query_positiva, excluir = search.extraer_exclusiones(
             "camiseta no verde", CATALOGO_PRUEBA
         )
@@ -203,15 +240,15 @@ class TestNegacion(unittest.TestCase):
 
 class TestBuscarRankingDosNiveles(unittest.TestCase):
     """
-    Valida que un match léxico siempre sale antes que uno puramente
-    semántico, sin necesidad de llamar a Ollama de verdad.
+    Verifies that a lexical match always ranks before a purely semantic
+    one, without needing to actually call Ollama.
     """
 
     def setUp(self):
         import numpy as np
         self.np = np
-        # Sustituimos embed_query por una versión falsa y determinista,
-        # para no depender de que Ollama esté instalado y corriendo.
+        # Replace embed_query with a fake, deterministic version, so we
+        # don't depend on Ollama being installed and running.
         self._embed_original = search.embed_query
         search.embed_query = lambda query: np.ones(4, dtype=np.float32)
 
@@ -221,19 +258,19 @@ class TestBuscarRankingDosNiveles(unittest.TestCase):
     def test_lexico_siempre_antes_que_semantico(self):
         np = self.np
         vectors = np.array([
-            [1.0, 0.0, 0.0, 0.0],  # producto 0: nada que ver semánticamente
-            [1.0, 1.0, 1.0, 1.0],  # producto 1: muy parecido semánticamente
+            [1.0, 0.0, 0.0, 0.0],  # product 0: no semantic relation at all
+            [1.0, 1.0, 1.0, 1.0],  # product 1: very similar semantically
         ], dtype=np.float32)
         meta = [
-            CATALOGO_PRUEBA[4],  # "Robot aspirador wifi" (sin relación léxica con "aro")
-            CATALOGO_PRUEBA[0],  # "Pendientes de aro minimalistas" (coincide léxicamente)
+            CATALOGO_PRUEBA[4],  # "Robot aspirador wifi" (no lexical relation to "aro")
+            CATALOGO_PRUEBA[0],  # "Pendientes de aro minimalistas" (lexical match)
         ]
 
         ranked, hay_match = search.buscar("aro", vectors, meta, search.PESOS_DEFECTO)
 
         self.assertTrue(hay_match)
-        # El primer resultado debe ser el que tiene coincidencia léxica,
-        # aunque el otro tenga mayor similitud semántica bruta.
+        # The first result must be the one with a lexical match, even
+        # though the other one has higher raw semantic similarity.
         primer_resultado = ranked[0]
         self.assertEqual(primer_resultado[2]["sku"], "JOY-000001")
 

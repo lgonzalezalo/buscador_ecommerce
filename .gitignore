@@ -14,3 +14,4 @@ index_meta.json
 
 # Variables de entorno / secretos
 .env
+.DS_Store

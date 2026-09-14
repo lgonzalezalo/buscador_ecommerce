@@ -1,16 +1,16 @@
 """
-build_index.py (adaptado al catálogo dummy de ecommerce)
+build_index.py (adapted for the ecommerce dummy catalog)
 -----------------------------------------------------------
-Genera embeddings usando Ollama en local, a partir de un catálogo con las
-columnas: sku, nombre, descripcion, categoria_nivel1..4, precio, stock,
-descuento, marca.
+Generates embeddings using local Ollama, from a catalog with the
+following columns: sku, nombre, descripcion, categoria_nivel1..4,
+precio, stock, descuento, marca.
 
-Requisito previo:
-    1. Instalar Ollama: https://ollama.com
-    2. Descargar el modelo: ollama pull bge-m3
-    3. Ollama debe estar corriendo
+Prerequisites:
+    1. Install Ollama: https://ollama.com
+    2. Pull the model: ollama pull bge-m3
+    3. Ollama must be running
 
-Uso:
+Usage:
     python build_index.py --input catalogo_dummy.csv --output index
 """
 
@@ -33,10 +33,10 @@ COLUMNAS_REQUERIDAS = ["sku", "nombre"]
 
 def build_text(row: dict) -> str:
     """
-    Concatena los campos relevantes del producto en un único texto para
-    generar el embedding. Se incluye la ruta completa de categorías porque
-    ayuda al modelo a capturar el contexto (ej. distinguir "Bufanda" en
-    Ropa > Accesorios de un producto de otra categoría).
+    Concatenates a product's relevant fields into a single text to be
+    embedded. The full category path is included because it helps the
+    model capture context (e.g. telling apart a "Bufanda" in
+    Ropa > Accesorios from a product in a different category).
     """
     categorias = " > ".join(
         c for c in [
@@ -57,15 +57,15 @@ def build_text(row: dict) -> str:
 
 def load_catalog(path: str) -> list[dict]:
     with open(path, newline="", encoding="utf-8") as f:
-        # Detectamos automáticamente si el CSV usa "," o ";" como separador.
-        # Esto es necesario porque Excel, según el idioma/región del sistema,
-        # a veces guarda los CSV con ";" en vez de ",".
+        # Auto-detect whether the CSV uses "," or ";" as the delimiter.
+        # This is needed because, depending on the system's language/
+        # region, Excel sometimes saves CSVs with ";" instead of ",".
         muestra = f.read(4096)
         f.seek(0)
         try:
             dialecto = csv.Sniffer().sniff(muestra, delimiters=",;")
         except csv.Error:
-            dialecto = csv.excel  # fallback: asume coma si no logra detectarlo
+            dialecto = csv.excel  # fallback: assume comma if detection fails
 
         reader = csv.DictReader(f, dialect=dialecto)
         rows = list(reader)

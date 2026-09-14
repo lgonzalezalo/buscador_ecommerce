@@ -1,36 +1,36 @@
 # config.yaml
 # ------------
-# Configuración centralizada del proyecto. build_index.py y search.py
-# leen este mismo fichero, para garantizar que ambos usan siempre el
-# mismo modelo de embeddings (si divergieran, los vectores generados en
-# la indexación dejarían de ser comparables con los de la búsqueda).
+# Centralized project configuration. build_index.py and search.py read
+# this same file, to guarantee that both always use the same embedding
+# model (if they diverged, the vectors generated at indexing time
+# would no longer be comparable with those from search time).
 
 ollama:
   url: "http://localhost:11434/api/embeddings"
   model: "bge-m3"
 
-# Pesos por defecto del boost léxico por campo. Se pueden sobrescribir
-# puntualmente por línea de comandos (--peso-nombre, etc.) sin tocar
-# este fichero.
+# Default weights for the per-field lexical boost. They can be
+# overridden on a per-run basis from the command line
+# (--peso-nombre, etc.) without touching this file.
 pesos:
   nombre: 1.0
   descripcion: 0.5
   categoria: 0.3
 
 spellcheck:
-  # Umbral de similitud (0-1) para aceptar una corrección ortográfica
-  # automática. Más alto = más estricto (menos correcciones, menos
-  # falsos positivos como "cena" -> "cadena").
+  # Similarity threshold (0-1) for accepting an automatic spelling
+  # correction. Higher = stricter (fewer corrections, fewer false
+  # positives like "cena" -> "cadena").
   cutoff: 0.87
 
 tokenizacion:
-  # Palabras más cortas que esto se ignoran (salvo que estén en la
-  # lista de negadores). Es una red de seguridad adicional a STOPWORDS.
+  # Words shorter than this are ignored (unless they're in the
+  # negators list). This is an extra safety net on top of STOPWORDS.
   longitud_minima_palabra: 2
 
-  # Palabras funcionales sin significado propio para buscar productos.
-  # Ojo: "con" y "sin" NO están aquí a propósito, porque pueden formar
-  # parte de nombres de producto reales ("sudadera con capucha").
+  # Functional words with no meaning of their own for product search.
+  # Note: "con" and "sin" are deliberately NOT here, since they can be
+  # part of real product names ("sudadera con capucha").
   stopwords:
     - de
     - del
@@ -45,7 +45,7 @@ tokenizacion:
     - por
     - para
     - en
-    # "y" entrecomillado: PyYAML (YAML 1.1) interpreta y/yes/no/on/off como booleanos.
+    # "y" quoted: PyYAML (YAML 1.1) parses y/yes/no/on/off as booleans.
     - "y"
     - o
     - a
@@ -54,9 +54,9 @@ tokenizacion:
     - su
     - sus
 
-  # Palabras que indican negación/exclusión ("sin X", "no X").
-  # "no" entrecomillado: sin comillas PyYAML lo lee como false y la negación
-  # deja de funcionar (p. ej. "camiseta no verde" acaba buscando verde).
+  # Words that signal negation/exclusion ("sin X", "no X").
+  # "no" quoted: unquoted, PyYAML reads it as false and negation
+  # stops working (e.g. "camiseta no verde" ends up searching for verde).
   negadores:
     - sin
-    - "no" # "no" entrecomillado: PyYAML (YAML 1.1) interpreta y/yes/no/on/off como booleanos.
+    - "no" # quoted: PyYAML (YAML 1.1) parses y/yes/no/on/off as booleans.

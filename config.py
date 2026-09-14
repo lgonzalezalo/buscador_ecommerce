@@ -1,18 +1,18 @@
 """
 config.py
 ---------
-Carga la configuración del proyecto desde config.yaml. Centraliza lo que
-antes eran constantes sueltas en build_index.py y search.py, para que
-ambos scripts usen siempre el mismo modelo/URL de Ollama y para poder
-ajustar pesos, umbrales y vocabulario sin tocar código Python.
+Loads the project configuration from config.yaml. Centralizes what
+used to be loose constants in build_index.py and search.py, so both
+scripts always use the same Ollama model/URL, and so weights,
+thresholds, and vocabulary can be tuned without touching Python code.
 
-Uso:
+Usage:
     from config import cargar_config
-    config = cargar_config()          # busca config.yaml junto a este fichero
+    config = cargar_config()          # looks for config.yaml next to this file
     config = cargar_config("otro.yaml")
 
-Si config.yaml no existe o le falta alguna clave, se usan estos valores
-por defecto (para que el proyecto nunca se rompa por falta de config).
+If config.yaml doesn't exist or is missing a key, these default values
+are used instead (so the project never breaks due to missing config).
 """
 
 import sys
@@ -22,10 +22,10 @@ import yaml
 
 RUTA_POR_DEFECTO = Path(__file__).resolve().parent / "config.yaml"
 
-# PyYAML usa YAML 1.1: 'no', 'y', 'on', 'off' se leen como booleanos.
-# Eso rompe listas de palabras en español (negador "no", stopword "y").
-# Copiamos los resolvers del SafeLoader y quitamos solo el de bool, para
-# que 'no' y 'y' sigan siendo texto aunque vayan sin comillas en el YAML.
+# PyYAML follows YAML 1.1: 'no', 'y', 'on', 'off' are parsed as
+# booleans. That breaks Spanish word lists (negator "no", stopword "y").
+# We copy SafeLoader's resolvers and drop only the boolean one, so
+# 'no' and 'y' stay as plain text even when unquoted in the YAML file.
 class _LoaderSinBoolsImplicitos(yaml.SafeLoader):
     pass
 
@@ -69,10 +69,10 @@ VALORES_POR_DEFECTO = {
 
 def _fusionar(base: dict, overrides: dict) -> dict:
     """
-    Fusiona dos diccionarios anidados: 'overrides' gana si hay conflicto,
-    pero las claves de 'base' que no se sobrescriben se conservan. Así,
-    si config.yaml solo define 'pesos.nombre', el resto de valores por
-    defecto (spellcheck, stopwords, etc.) no desaparecen.
+    Merges two nested dictionaries: 'overrides' wins on conflict, but
+    'base' keys that aren't overridden are kept. This way, if
+    config.yaml only defines 'pesos.nombre', the rest of the defaults
+    (spellcheck, stopwords, etc.) don't disappear.
     """
     resultado = dict(base)
     for clave, valor in overrides.items():

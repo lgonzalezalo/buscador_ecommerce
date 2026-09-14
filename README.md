@@ -15,9 +15,15 @@ terceros.
   - **Spellcheck** contra el vocabulario real del catálogo (no un diccionario genérico)
   - **Ranking en dos niveles**: coincidencia léxica siempre antes que similitud semántica pura
   - **Stemming básico** de plurales/singulares en español (aro/aros, reloj/relojes...)
+  - **Normalización de acentos** (joyeria = Joyería, sin confundir "ñ" con vocal acentuada)
+  - **Normalización de unidades** (250gr = 250g = 250 gramos; 600mg = 600 mg)
   - **Detección de negación** ("sin X", "no X"), consciente del catálogo: distingue una
     negación genérica ("pendientes *sin aros*" → excluye aros) de un nombre de
     producto real ("*sujetador sin aros*" → se busca tal cual)
+  - **Agrupación de variantes por producto padre**: si el catálogo modela
+    relación padre-hijo (`producto_padre_id`), el "top N" cuenta productos
+    distintos, no filas sueltas, y cada resultado muestra sus otras
+    presentaciones disponibles (ver `catalogo_farmacia.csv` como ejemplo)
 - Suite de tests (`tests/`) que cubre toda la lógica anterior sin necesitar Ollama corriendo
 
 ## Requisitos
@@ -129,13 +135,20 @@ pytest tests/ -v
 .
 ├── config.yaml             # Configuración centralizada (pesos, modelo, stopwords...)
 ├── config.py               # Módulo que carga config.yaml
-├── generate_catalog.py    # Genera el catálogo dummy de 2000 productos
-├── build_index.py         # Indexa un catálogo generando embeddings
-├── search.py              # Busca en el índice generado
-├── catalogo_dummy.csv     # Catálogo de ejemplo ya generado
-├── requirements.txt       # Dependencias de ejecución
+├── normalizacion.py        # Acentos, unidades, plurales, tokenización
+├── indice.py               # Carga de índice, embeddings, formato de categoría
+├── negacion.py             # Detección de negación consciente del catálogo
+├── spellcheck.py           # Corrección ortográfica contra el vocabulario propio
+├── variantes.py            # Agrupación de resultados por producto padre
+├── generate_catalog.py     # Genera el catálogo dummy de 2000 productos
+├── build_index.py          # Indexa un catálogo generando embeddings
+├── search.py               # Orquesta boost léxico, ranking y CLI
+├── catalogo_dummy.csv      # Catálogo de ejemplo ya generado
+├── requirements.txt        # Dependencias de ejecución
 ├── tests/
 │   ├── test_search.py       # Tests de la lógica de búsqueda
+│   ├── test_config.py       # Tests del parseo de config.yaml (bug de PyYAML)
+│   ├── test_variantes.py    # Tests de agrupación por producto padre
 │   └── test_build_index.py  # Tests de carga/indexación de catálogo
 └── .gitignore
 ```
@@ -152,6 +165,12 @@ pytest tests/ -v
   comunes de plural en español, pero no maneja irregularidades complejas.
 - **Negación básica**: solo entiende el patrón "negador + palabra
   siguiente" ("sin X"), no negaciones compuestas ("ni X ni Y").
+- **Variantes solo modeladas en el catálogo de farmacia**: el catálogo
+  general (`catalogo_dummy.csv`) no tiene relación padre-hijo — cada
+  fila es un producto independiente. `variantes.py` funciona con
+  cualquier catálogo (cae a "un grupo por fila" si no hay
+  `producto_padre_id`), pero para verlo en acción de verdad hace falta
+  un catálogo que sí modele variantes, como `catalogo_farmacia.csv`.
 - **Coste de operación**: prácticamente $0 corriendo en local con
   Ollama. Si se sustituye por una API de pago (OpenAI, etc.), el coste
   para este volumen de catálogo sigue siendo de céntimos al mes.

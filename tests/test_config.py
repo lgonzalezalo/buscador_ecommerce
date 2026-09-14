@@ -1,8 +1,8 @@
 """
 tests/test_config.py
 ---------------------
-PyYAML (YAML 1.1) interpreta no/yes/y/n/on/off como booleanos. Eso rompe
-las listas de palabras de config.yaml si van sin comillas.
+PyYAML (YAML 1.1) parses no/yes/y/n/on/off as booleans. That breaks
+config.yaml's word lists if they're left unquoted.
 """
 
 import sys

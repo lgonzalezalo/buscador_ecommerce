@@ -1,11 +1,10 @@
 """
 tests/test_build_index.py
 ---------------------------
-Tests de las funciones de build_index.py: sobre todo la detección
-automática de separador CSV (",", ";"), que fue un problema real
-encontrado durante el desarrollo.
+Tests for build_index.py's functions: mainly automatic CSV delimiter
+detection (",", ";"), which was a real issue found during development.
 
-Ejecutar con:
+Run with:
     python -m unittest discover -s tests
 """
 
@@ -56,8 +55,8 @@ class TestLoadCatalogDelimiter(unittest.TestCase):
             Path(path).unlink()
 
     def test_detecta_separador_punto_y_coma(self):
-        # Este es el caso real que dio problemas: un CSV guardado desde
-        # Excel en configuración regional española/europea usa ";".
+        # This is the real case that caused problems: a CSV saved from
+        # Excel under a Spanish/European locale uses ";".
         path = _escribir_csv_temporal(";")
         try:
             filas = build_index.load_catalog(path)
