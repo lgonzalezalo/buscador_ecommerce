@@ -113,6 +113,45 @@ python search.py --query "collar de oro" --solo-stock
 | `--peso-categoria` | `0.3` | Peso del boost léxico en categoría |
 | `--spellcheck-cutoff` | `0.87` | Umbral de similitud (0-1) para aceptar una corrección ortográfica |
 
+## Catálogo de farmacia (con variantes padre-hijo)
+
+Además del catálogo general, el proyecto incluye `catalogo_farmacia.csv`
+(5.000 productos) y su generador (`generate_catalog_farmacia.py`), pensado
+como banco de pruebas para dos cosas que el catálogo general no ejercita:
+normalización de unidades tipo `mg`/`mcg` (dosis de medicamentos) y la
+**relación padre-hijo entre variantes de producto**.
+
+### Esquema adicional
+
+Mismo esquema que el catálogo general, más tres columnas:
+
+| Columna | Qué guarda |
+|---|---|
+| `producto_padre_id` | Compartido por todas las variantes de un mismo producto base (ej. todas las dosis de "Farmalia Paracetamol") |
+| `tipo_variante` | Qué distingue a las variantes entre sí (aquí siempre `"presentacion"`) |
+| `valor_variante` | El valor concreto de esa variante (ej. `"600mg 20 comprimidos"`) |
+
+Un "padre" es una combinación (concepto genérico + marca) — ej.
+"Farmalia Paracetamol" — y sus "hijos" son las distintas dosis/formatos/
+cantidades de ese mismo producto. Marca, descripción y categoría se
+comparten entre hermanos; precio, stock y descuento son independientes
+por variante. El catálogo tiene 1.206 productos padre distintos.
+
+### Regenerar, indexar y buscar
+
+```bash
+python generate_catalog_farmacia.py --output catalogo_farmacia.csv
+python build_index.py --input catalogo_farmacia.csv --output index_farmacia
+python search.py --index index_farmacia --query "paracetamol" --top 3
+python search.py --index index_farmacia --query "vitamina d 25mcg"
+python search.py --index index_farmacia --query "jarabe sin azúcar"
+```
+
+Con este catálogo, el "top N" de `search.py` cuenta **productos padre
+distintos**, no filas sueltas — cada resultado incluye un bloque "Otras
+presentaciones" con el resto de dosis/formatos de esa misma marca,
+mostrando su propio precio, descuento y stock (ver `variantes.py`).
+
 ## Tests
 
 ```bash
@@ -141,9 +180,11 @@ pytest tests/ -v
 ├── spellcheck.py           # Corrección ortográfica contra el vocabulario propio
 ├── variantes.py            # Agrupación de resultados por producto padre
 ├── generate_catalog.py     # Genera el catálogo dummy de 2000 productos
+├── generate_catalog_farmacia.py  # Genera el catálogo de farmacia (5000, con variantes)
 ├── build_index.py          # Indexa un catálogo generando embeddings
 ├── search.py               # Orquesta boost léxico, ranking y CLI
 ├── catalogo_dummy.csv      # Catálogo de ejemplo ya generado
+├── catalogo_farmacia.csv   # Catálogo de farmacia con relación padre-hijo
 ├── requirements.txt        # Dependencias de ejecución
 ├── tests/
 │   ├── test_search.py       # Tests de la lógica de búsqueda
