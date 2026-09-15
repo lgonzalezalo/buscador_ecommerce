@@ -20,7 +20,7 @@ from pathlib import Path
 
 import yaml
 
-RUTA_POR_DEFECTO = Path(__file__).resolve().parent / "config.yaml"
+RUTA_POR_DEFECTO = Path(__file__).resolve().parent.parent / "config.yaml"
 
 # PyYAML follows YAML 1.1: 'no', 'y', 'on', 'off' are parsed as
 # booleans. That breaks Spanish word lists (negator "no", stopword "y").

@@ -13,8 +13,8 @@ LONGITUD_MINIMA_PALABRA).
 import re
 from difflib import get_close_matches
 
-from config import cargar_config
-from normalizacion import tokenizar, quitar_acentos, STOPWORDS, LONGITUD_MINIMA_PALABRA
+from config.config import cargar_config
+from busqueda.normalizacion import tokenizar, quitar_acentos, STOPWORDS, LONGITUD_MINIMA_PALABRA
 
 CONFIG = cargar_config()
 SPELLCHECK_CUTOFF_DEFECTO = CONFIG["spellcheck"]["cutoff"]

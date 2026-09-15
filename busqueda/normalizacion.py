@@ -11,7 +11,7 @@ foundation that negacion.py, scoring.py, and spellcheck.py build on.
 
 import re
 
-from config import cargar_config
+from config.config import cargar_config
 
 CONFIG = cargar_config()
 LONGITUD_MINIMA_PALABRA = CONFIG["tokenizacion"]["longitud_minima_palabra"]

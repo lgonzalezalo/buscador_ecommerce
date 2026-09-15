@@ -18,7 +18,7 @@ from pathlib import Path
 # Allows importing search.py from the project's root folder
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-import search
+import busqueda.search as search
 
 
 # Small test catalog, independent of the real catalogo_dummy.csv, so

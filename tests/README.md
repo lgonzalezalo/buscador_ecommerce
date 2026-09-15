@@ -166,34 +166,6 @@ resultado es forzosamente el "menos malo" de los dos grupos, no una
 tercera opción — ampliar los ejemplos con casos reales que falle según
 se use es la forma de mejorarlo con el tiempo.
 
-### Contenido de `faq.csv`
-
-24 entradas: política de envíos, devoluciones, pago, garantía, horario,
-contacto — más una descripción del propio negocio (qué es, qué vende,
-a quién se dirige) y el cumplimiento normativo español de venta de
-medicamentos online (Real Decreto 870/2013): solo se pueden vender
-medicamentos **sin receta** desde una farmacia registrada en DISTAFARMA
-(AEMPS); los medicamentos con receta están prohibidos por ley en el
-canal online, sea cual sea la tienda.
-
-**Bug real encontrado y corregido**: las primeras 18 entradas se
-escribieron a mano en el CSV, y varias respuestas contenían comas sin
-poner el campo entre comillas — el parser de CSV cortaba la respuesta
-en la primera coma, perdiendo el resto de la frase silenciosamente (sin
-error visible). Se regeneró todo el fichero con `csv.writer` de Python,
-que aplica las comillas automáticamente donde hacen falta.
-
-**Caso real de límite de la recuperación pura**: la pregunta
-`"¿puedo comprar antibióticos aquí?"` no encontraba la entrada correcta
-(la de medicamentos con receta) porque ninguna respuesta mencionaba la
-palabra "antibióticos" — el modelo de embeddings no tiene forma de
-saber que "antibiótico" implica "con receta" si el texto recuperado no
-lo dice explícitamente. Se corrigió añadiendo ejemplos concretos
-(antibióticos, opioides, ansiolíticos...) a esa respuesta. Es una
-ilustración directa de por qué el RAG de solo recuperación tiene techo:
-un LLM generativo de verdad podría razonar esa inferencia sin que el
-FAQ lo mencione palabra por palabra; el retrieval puro no.
-
 ## Catálogo de farmacia (con variantes padre-hijo)
 
 Además del catálogo general, el proyecto incluye `catalogo_farmacia.csv`
@@ -201,13 +173,6 @@ Además del catálogo general, el proyecto incluye `catalogo_farmacia.csv`
 como banco de pruebas para dos cosas que el catálogo general no ejercita:
 normalización de unidades tipo `mg`/`mcg` (dosis de medicamentos) y la
 **relación padre-hijo entre variantes de producto**.
-
-**Nota sobre cumplimiento normativo**: por diseño, todas las categorías
-del catálogo (`Medicamentos sin receta`, `Vitaminas y suplementos`,
-`Cuidado personal`, etc.) son productos legales de vender online en
-España — no incluye ningún medicamento sujeto a prescripción médica,
-consistente con el Real Decreto 870/2013 (ver la sección de FAQ más
-arriba).
 
 ### Esquema adicional
 
@@ -344,8 +309,7 @@ reorganizar solo el código.
   un LLM. Conectar una API barata (Claude Haiku, GPT-4o-mini) para
   generar una respuesta más natural a partir del contexto recuperado
   es la mejora natural siguiente, no algo que haga falta para que esto
-  ya sea útil — ver el caso real de "antibióticos" documentado más
-  arriba, que ilustra bien esta limitación.
+  ya sea útil.
 - **Clasificación de intención limitada por los ejemplos, no por
   reglas exhaustivas**: una pregunta sobre un tema sin ningún ejemplo
   parecido en `EJEMPLOS_PRODUCTO`/`EJEMPLOS_FAQ` (`intencion.py`) se

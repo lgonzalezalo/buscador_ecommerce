@@ -17,7 +17,7 @@ import sys
 import numpy as np
 import requests
 
-from config import cargar_config
+from config.config import cargar_config
 
 CONFIG = cargar_config()
 OLLAMA_URL = CONFIG["ollama"]["url"]

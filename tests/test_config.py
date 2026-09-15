@@ -12,7 +12,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-import config
+import config.config as config
 
 
 YAML_SIN_COMILLAS = """

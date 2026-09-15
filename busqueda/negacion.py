@@ -12,9 +12,9 @@ Depends on normalizacion.py (tokenizar, variantes_stem) and indice.py
 
 import re
 
-from config import cargar_config
-from normalizacion import tokenizar, variantes_stem, quitar_acentos
-from indice import format_categoria
+from config.config import cargar_config
+from busqueda.normalizacion import tokenizar, variantes_stem, quitar_acentos
+from indexado.indice import format_categoria
 
 CONFIG = cargar_config()
 
