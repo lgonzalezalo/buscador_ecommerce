@@ -23,6 +23,15 @@ spellcheck:
   # positives like "cena" -> "cadena").
   cutoff: 0.87
 
+confianza:
+  # Minimum semantic similarity (0-1) to consider a purely semantic
+  # result (no lexical match at all) as a genuine, confident match.
+  # Below this, the query returns no strong hits — hay_match is False
+  # AND the best score is weak — so instead of presenting the top-N as
+  # if they were solid matches, search.py shows a "no clear match, but
+  # here's what might interest you" disclaimer.
+  umbral_semantico: 0.5
+
 tokenizacion:
   # Words shorter than this are ignored (unless they're in the
   # negators list). This is an extra safety net on top of STOPWORDS.

@@ -51,3 +51,19 @@ class TestCargarConfigYaml11(unittest.TestCase):
             self.assertNotIn(True, cargada["tokenizacion"]["stopwords"])
         finally:
             Path(tmp.name).unlink()
+
+    def test_yaml_mal_formado_usa_valores_por_defecto_sin_reventar(self):
+        # Regression test from the audit: a syntax error in config.yaml
+        # (e.g. a missing colon) used to crash the whole app with a raw
+        # yaml.YAMLError traceback. It must fall back to the defaults
+        # instead, the same way a MISSING file already did.
+        tmp = tempfile.NamedTemporaryFile(
+            mode="w", suffix=".yaml", delete=False, encoding="utf-8"
+        )
+        tmp.write("pesos:\n  nombre: 1.0\n  descripcion 0.5\n")  # missing ":"
+        tmp.close()
+        try:
+            cargada = config.cargar_config(tmp.name)  # must not raise
+            self.assertEqual(cargada["pesos"], config.VALORES_POR_DEFECTO["pesos"])
+        finally:
+            Path(tmp.name).unlink()

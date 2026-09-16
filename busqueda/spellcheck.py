@@ -6,7 +6,7 @@ generic Spanish dictionary): builds the set of words that genuinely
 exist in the catalog, and corrects a query toward the closest matching
 word only when it doesn't match anything that already exists.
 
-Depends on normalizacion.py (tokenizar, quitar_acentos, STOPWORDS,
+Depends on normalizacion.py (palabras_base, quitar_acentos, STOPWORDS,
 LONGITUD_MINIMA_PALABRA).
 """
 
@@ -14,14 +14,21 @@ import re
 from difflib import get_close_matches
 
 from config.config import cargar_config
-from busqueda.normalizacion import tokenizar, quitar_acentos, STOPWORDS, LONGITUD_MINIMA_PALABRA
+from busqueda.normalizacion import palabras_base, quitar_acentos, STOPWORDS, LONGITUD_MINIMA_PALABRA
 
 CONFIG = cargar_config()
 SPELLCHECK_CUTOFF_DEFECTO = CONFIG["spellcheck"]["cutoff"]
 
 
 def build_vocabulary(meta: list) -> set:
-    """Builds the set of words that genuinely exist in the catalog."""
+    """
+    Builds the set of words that genuinely exist in the catalog.
+    Uses palabras_base() (not tokenizar()) on purpose: correction
+    candidates must always be real words, never a synthetic artifact
+    of the plural-stripping heuristic (e.g. "reloje", produced while
+    stemming "relojes" — not a real word, and offering it as a
+    "correction" would make the query worse, not better).
+    """
     vocabulario = set()
     for row in meta:
         texto_completo = " ".join([
@@ -33,7 +40,7 @@ def build_vocabulary(meta: list) -> set:
             row.get("categoria_nivel4", ""),
             row.get("marca", ""),
         ])
-        vocabulario |= tokenizar(texto_completo)
+        vocabulario |= palabras_base(texto_completo)
     return vocabulario
 
 

@@ -17,6 +17,7 @@ in intencion.py, on purpose — a different concern from retrieval.
 """
 
 import csv
+import os
 
 import numpy as np
 
@@ -25,7 +26,16 @@ from indexado.indice import embed_query, cosine_similarity
 RUTA_FAQ_POR_DEFECTO = "faq.csv"
 
 
+class FaqNoEncontradaError(Exception):
+    """The FAQ CSV file doesn't exist at the given path."""
+
+
 def cargar_faq(path: str = RUTA_FAQ_POR_DEFECTO) -> list:
+    if not os.path.exists(path):
+        raise FaqNoEncontradaError(
+            f"No se encontró el archivo de FAQ '{path}'.\n"
+            f"Comprueba la ruta, o pásala explícitamente con --faq."
+        )
     with open(path, newline="", encoding="utf-8") as f:
         return list(csv.DictReader(f))
 
@@ -42,12 +52,18 @@ def construir_indice_faq(faq_items: list) -> np.ndarray:
     return np.array(vectores, dtype=np.float32)
 
 
-def responder_faq(query: str, faq_items: list, faq_vectors: np.ndarray):
+def responder_faq(query: str, faq_items: list, faq_vectors: np.ndarray, query_vec: np.ndarray = None):
     """
     Returns (entrada_faq, similitud) for the closest FAQ entry to the
     query, by cosine similarity.
+
+    'query_vec', if given, is used instead of re-embedding 'query' —
+    the intent classifier (intencion.py) already embeds this exact
+    query text right before calling this function, so there's no need
+    to ask Ollama for the same embedding twice.
     """
-    query_vec = embed_query(query)
+    if query_vec is None:
+        query_vec = embed_query(query)
     sims = cosine_similarity(query_vec, faq_vectors)
     mejor_idx = int(np.argmax(sims))
     return faq_items[mejor_idx], float(sims[mejor_idx])

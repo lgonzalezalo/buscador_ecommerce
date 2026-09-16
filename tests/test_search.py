@@ -11,14 +11,21 @@ or, if you have pytest installed:
     pytest tests/
 """
 
+import io
+import json
+import shutil
 import sys
+import tempfile
 import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
+
+import numpy as np
 
 # Allows importing search.py from the project's root folder
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-import busqueda.search as search
+import busqueda.buscador as search
 
 
 # Small test catalog, independent of the real catalogo_dummy.csv, so
@@ -202,6 +209,25 @@ class TestVocabularioYSpellcheck(unittest.TestCase):
         self.assertFalse(cambio)
         self.assertEqual(corregida, "cena mejicana")
 
+    def test_vocabulario_no_incluye_artefactos_del_stemmer(self):
+        # Regression test for a real bug: tokenizar("relojes") expands
+        # to {"relojes", "reloje", "reloj"} for MATCHING purposes, but
+        # "reloje" isn't a real word — it's just an intermediate stem
+        # candidate. The spellcheck vocabulary must never include it,
+        # or it could end up "correcting" a query into a non-word.
+        vocab = search.build_vocabulary([{"nombre": "Reloj de pulsera clásico"}])
+        self.assertIn("reloj", vocab)
+        self.assertNotIn("reloje", vocab)
+
+    def test_no_corrige_hacia_una_palabra_que_no_existe(self):
+        # Regression test: before the fix, "relojs de pulsera" was
+        # "corrected" to "reloje de pulsera" — a synthetic stem that
+        # doesn't match "Reloj de pulsera clásico" at all, making the
+        # search WORSE than not correcting anything.
+        vocab = search.build_vocabulary([{"nombre": "Reloj de pulsera clásico"}])
+        corregida, cambio = search.corregir_query("relojs de pulsera", vocab)
+        self.assertNotIn("reloje", corregida)
+
 
 class TestNegacion(unittest.TestCase):
 
@@ -236,6 +262,20 @@ class TestNegacion(unittest.TestCase):
         camiseta_blanca = next(p for p in CATALOGO_PRUEBA if p["sku"] == "ROP-000004")
         self.assertTrue(search.producto_excluido(camiseta_verde, excluir))
         self.assertFalse(search.producto_excluido(camiseta_blanca, excluir))
+
+    def test_frase_establecida_reconoce_acentos(self):
+        # Regression test for a real bug: frase_establecida() compared
+        # the query (accent-stripped) against the raw catalog name
+        # (never accent-stripped). "café sin cafeína" (an accented
+        # product name) failed to be recognized as an established
+        # phrase, so "cafeina" was wrongly treated as a term to
+        # exclude — the opposite of what the user meant.
+        catalogo_con_acento = [{"nombre": "Café sin cafeína natural"}]
+        query_positiva, excluir = search.extraer_exclusiones(
+            "cafe sin cafeina", catalogo_con_acento
+        )
+        self.assertEqual(query_positiva, "cafe sin cafeina")
+        self.assertEqual(excluir, set())
 
 
 class TestBuscarRankingDosNiveles(unittest.TestCase):
@@ -273,6 +313,63 @@ class TestBuscarRankingDosNiveles(unittest.TestCase):
         # though the other one has higher raw semantic similarity.
         primer_resultado = ranked[0]
         self.assertEqual(primer_resultado[2]["sku"], "JOY-000001")
+
+
+class TestAvisoBajaConfianza(unittest.TestCase):
+    """
+    End-to-end tests (via main()) for the "no clear match" disclaimer:
+    when there's no lexical match at all AND the best semantic score
+    is weak, search.py should say so explicitly instead of presenting
+    mediocre results as if they were confident matches.
+    """
+
+    def setUp(self):
+        self._embed_original = search.embed_query
+        self._tmpdir = tempfile.mkdtemp()
+        self._prefix = str(Path(self._tmpdir) / "idx")
+
+        catalogo = [{
+            "sku": "ROP-000001", "nombre": "Camiseta básica",
+            "descripcion": "Camiseta de algodón suave.", "categoria_nivel1": "Ropa",
+            "categoria_nivel2": "", "categoria_nivel3": "", "categoria_nivel4": "",
+            "precio": "10.00", "stock": "Yes", "descuento": "0", "marca": "TelaViva",
+        }]
+        vectors = np.array([[1.0, 0.0, 0.0, 0.0]], dtype=np.float32)
+        np.save(f"{self._prefix}_vectors.npy", vectors)
+        with open(f"{self._prefix}_meta.json", "w", encoding="utf-8") as f:
+            json.dump(catalogo, f)
+
+    def tearDown(self):
+        search.embed_query = self._embed_original
+        shutil.rmtree(self._tmpdir, ignore_errors=True)
+
+    def _ejecutar_main(self, query, vector_query):
+        # "zapatillas deportivas" shares no word at all with "Camiseta
+        # básica de algodón" (no lexical match either way) — only the
+        # mocked embedding vector controls the semantic similarity,
+        # isolating exactly what we want to test.
+        search.embed_query = lambda q: np.array(vector_query, dtype=np.float32)
+        argv_original = sys.argv
+        sys.argv = [
+            "search.py", "--index", self._prefix, "--query", query,
+            "--intencion", "producto",
+        ]
+        salida = io.StringIO()
+        try:
+            with redirect_stdout(salida):
+                search.main()
+        finally:
+            sys.argv = argv_original
+        return salida.getvalue()
+
+    def test_muestra_aviso_si_la_similitud_es_baja(self):
+        salida = self._ejecutar_main("zapatillas deportivas", [0.0, 1.0, 0.0, 0.0])
+        self.assertIn("No encontramos ninguna coincidencia clara", salida)
+
+    def test_no_muestra_aviso_si_la_similitud_es_alta(self):
+        salida = self._ejecutar_main("zapatillas deportivas", [0.99, 0.01, 0.0, 0.0])
+        self.assertNotIn("No encontramos ninguna coincidencia clara", salida)
+        self.assertIn("Resultados para", salida)
 
 
 if __name__ == "__main__":

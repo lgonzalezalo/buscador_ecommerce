@@ -1,3 +1,3 @@
-from busqueda.search import main
+from busqueda.buscador import main
 if __name__ == "__main__":
     main()

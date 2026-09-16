@@ -111,6 +111,26 @@ def variantes_stem(palabra: str) -> set:
 # Final tokenization
 # ---------------------------------------------------------------------------
 
+def palabras_base(texto: str) -> set:
+    """
+    Like tokenizar(), but WITHOUT expanding each word into its
+    plural/singular stem variants. Returns only the words that
+    literally occur in the text (after accent stripping, unit
+    normalization, and stopword/length filtering).
+
+    This exists specifically for spellcheck.build_vocabulary(): a
+    spelling correction should only ever suggest a word that genuinely
+    appears somewhere in the catalog, never a synthetic artifact of
+    the plural-stripping heuristic below (e.g. stemming "relojes"
+    produces the candidate "reloje" as an intermediate form — a
+    non-word that should never be offered as a "correction").
+    """
+    texto_normalizado = quitar_acentos(texto.lower())
+    texto_normalizado = normalizar_unidades(texto_normalizado)
+    palabras = re.findall(r"[a-zñ0-9]+", texto_normalizado)
+    return {p for p in palabras if len(p) >= LONGITUD_MINIMA_PALABRA and p not in STOPWORDS}
+
+
 def tokenizar(texto: str) -> set:
     """
     Extracts lowercase words with accents stripped (see quitar_acentos)
@@ -120,11 +140,7 @@ def tokenizar(texto: str) -> set:
     plural/singular variants (basic stemming) so that "aro" and "aros"
     count as the same word for search purposes.
     """
-    texto_normalizado = quitar_acentos(texto.lower())
-    texto_normalizado = normalizar_unidades(texto_normalizado)
-    palabras = re.findall(r"[a-zñ0-9]+", texto_normalizado)
     resultado = set()
-    for p in palabras:
-        if len(p) >= LONGITUD_MINIMA_PALABRA and p not in STOPWORDS:
-            resultado |= variantes_stem(p)
+    for p in palabras_base(texto):
+        resultado |= variantes_stem(p)
     return resultado

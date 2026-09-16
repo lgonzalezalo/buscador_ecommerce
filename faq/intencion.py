@@ -67,12 +67,19 @@ def construir_ejemplos_intencion():
     return vectores, etiquetas
 
 
-def detectar_intencion(query: str, vectores_ejemplos: np.ndarray, etiquetas_ejemplos: list) -> str:
+def detectar_intencion(query: str, vectores_ejemplos: np.ndarray, etiquetas_ejemplos: list,
+                        query_vec: np.ndarray = None) -> str:
     """
     Returns "faq" or "producto": whichever few-shot example the query
     is most similar to, by cosine similarity (nearest neighbor).
+
+    'query_vec', if given, is used instead of re-embedding 'query' —
+    lets the caller reuse an embedding it already computed for the
+    exact same text (see faq.py's responder_faq(), called on the same
+    query right after this in the FAQ path).
     """
-    query_vec = embed_query(query)
+    if query_vec is None:
+        query_vec = embed_query(query)
     sims = cosine_similarity(query_vec, vectores_ejemplos)
     mejor_idx = int(np.argmax(sims))
     return etiquetas_ejemplos[mejor_idx]

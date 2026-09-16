@@ -8,11 +8,17 @@ formatting a product's category path (a utility shared by negacion.py
 and used from search.py).
 
 Depends on nothing else in the project except config.py.
+
+Error handling: this module raises exceptions (OllamaError,
+IndiceError and their subclasses) rather than calling sys.exit()
+directly. That's on purpose — a library function shouldn't be able to
+kill the whole process. The CLI entry points (buscador.py, indexador.py)
+are the ones that catch these and turn them into a friendly message and
+a clean exit.
 """
 
 import json
 import os
-import sys
 
 import numpy as np
 import requests
@@ -24,39 +30,122 @@ OLLAMA_URL = CONFIG["ollama"]["url"]
 EMBEDDING_MODEL = CONFIG["ollama"]["model"]
 
 
+class OllamaError(Exception):
+    """Base class for problems talking to Ollama."""
+
+
+class OllamaConexionError(OllamaError):
+    """Ollama couldn't be reached at all: not running, wrong URL,
+    network issue, or the request timed out."""
+
+
+class OllamaModeloNoDisponibleError(OllamaError):
+    """Ollama is reachable, but the configured embedding model hasn't
+    been pulled yet (ollama pull <model>)."""
+
+
+class IndiceError(Exception):
+    """Base class for problems with a generated product index."""
+
+
+class IndiceNoEncontradoError(IndiceError):
+    """The index files (_vectors.npy / _meta.json) don't exist."""
+
+
+class IndiceCorruptoError(IndiceError):
+    """The index files exist but don't agree on how many products they
+    describe — vectors and metadata have gone out of sync."""
+
+
 def load_index(prefix: str):
     vectors_path = f"{prefix}_vectors.npy"
     meta_path = f"{prefix}_meta.json"
     if not os.path.exists(vectors_path) or not os.path.exists(meta_path):
-        sys.exit(
-            f"Index '{prefix}' not found. Run build_index.py first."
+        raise IndiceNoEncontradoError(
+            f"No se encontró el índice '{prefix}'. Ejecuta primero build_index.py."
         )
+
     vectors = np.load(vectors_path)
     with open(meta_path, encoding="utf-8") as f:
         meta = json.load(f)
+
+    if len(vectors) != len(meta):
+        raise IndiceCorruptoError(
+            f"El índice '{prefix}' está corrupto: {len(vectors)} vectores pero "
+            f"{len(meta)} entradas de catálogo (deberían coincidir).\n"
+            f"Vuelve a ejecutar build_index.py para regenerarlo de forma consistente."
+        )
     return vectors, meta
 
 
-def embed_query(query: str) -> np.ndarray:
+def embed_query(texto: str) -> np.ndarray:
+    """
+    Requests the embedding of a single text from Ollama. Used both for
+    search queries and, during indexing, for each catalog entry — see
+    embed_batch() below for the batched version used by build_index.py.
+    """
     try:
         response = requests.post(
             OLLAMA_URL,
-            json={"model": EMBEDDING_MODEL, "prompt": query},
+            json={"model": EMBEDDING_MODEL, "prompt": texto},
             timeout=30,
         )
-    except requests.exceptions.ConnectionError:
-        sys.exit(
-            "Could not connect to Ollama. Is it installed and running?\n"
-            "Try running 'ollama list' in another terminal to check."
-        )
+    except requests.exceptions.RequestException as e:
+        # Catches ConnectionError, Timeout, and anything else requests
+        # can raise before we even get a response — not just
+        # ConnectionError (a Timeout is a sibling class, not a subclass).
+        raise OllamaConexionError(
+            "No se pudo conectar con Ollama. ¿Está instalado y corriendo?\n"
+            "Prueba a ejecutar 'ollama list' en otra Terminal para comprobarlo."
+        ) from e
 
     if response.status_code == 404:
-        sys.exit(
-            f"Ollama returned 404: the model '{EMBEDDING_MODEL}' hasn't been pulled.\n"
-            f"Run: ollama pull {EMBEDDING_MODEL}"
+        raise OllamaModeloNoDisponibleError(
+            f"Ollama respondió 404: el modelo '{EMBEDDING_MODEL}' no está descargado.\n"
+            f"Ejecuta: ollama pull {EMBEDDING_MODEL}"
         )
-    response.raise_for_status()
+
+    try:
+        response.raise_for_status()
+    except requests.exceptions.HTTPError as e:
+        raise OllamaError(f"Ollama devolvió un error inesperado: {e}") from e
+
     return np.array(response.json()["embedding"], dtype=np.float32)
+
+
+def embed_batch(textos: list, hilos: int = 8, on_progreso=None) -> list:
+    """
+    Embeds several texts concurrently (Ollama serves concurrent
+    requests fine for a local, single-user setup), instead of one
+    sequential HTTP round-trip per text. Used by build_index.py to
+    index a catalog without waiting on thousands of requests in a row.
+
+    'hilos' controls how many requests are in flight at once — 8 is a
+    reasonable default for a local Ollama instance; raise it if your
+    machine and Ollama's own concurrency settings can take more.
+
+    'on_progreso', if given, is called with the number of texts
+    embedded so far (for a progress readout), each time one finishes —
+    NOT necessarily in the same order as 'textos', which is why results
+    are placed back into their original position before returning.
+
+    Returns the vectors in the SAME ORDER as 'textos'.
+    """
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    resultados = [None] * len(textos)
+    completados = 0
+
+    with ThreadPoolExecutor(max_workers=hilos) as executor:
+        futuros = {executor.submit(embed_query, texto): i for i, texto in enumerate(textos)}
+        for futuro in as_completed(futuros):
+            indice = futuros[futuro]
+            resultados[indice] = futuro.result()
+            completados += 1
+            if on_progreso:
+                on_progreso(completados)
+
+    return resultados
 
 
 def cosine_similarity(query_vec: np.ndarray, matrix: np.ndarray) -> np.ndarray:

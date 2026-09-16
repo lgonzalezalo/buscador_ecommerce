@@ -1,3 +1,3 @@
-from catalogos.generate_catalog import main
+from catalogos.generador_dummy import main
 if __name__ == "__main__":
     main()

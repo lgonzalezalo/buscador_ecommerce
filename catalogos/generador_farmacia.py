@@ -29,6 +29,7 @@ Usage:
 import argparse
 import csv
 import random
+import sys
 
 random.seed(7)
 
@@ -277,6 +278,15 @@ def main():
 
     padres_usados = len(set(r["producto_padre_id"] for r in filas))
     print(f"Generadas {len(filas)} filas ({padres_usados} productos padre distintos) en {args.output}")
+
+    if len(filas) < FILAS_OBJETIVO:
+        print(
+            f"\nAVISO: solo se generaron {len(filas)} de las {FILAS_OBJETIVO} filas "
+            f"objetivo — se agotaron las combinaciones de (concepto, marca, "
+            f"presentación) disponibles. Añade más conceptos, marcas o "
+            f"presentaciones a TAXONOMIA para llegar al total deseado.",
+            file=sys.stderr,
+        )
 
 
 if __name__ == "__main__":

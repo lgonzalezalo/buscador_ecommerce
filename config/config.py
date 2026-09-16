@@ -56,6 +56,9 @@ VALORES_POR_DEFECTO = {
     "spellcheck": {
         "cutoff": 0.87,
     },
+    "confianza": {
+        "umbral_semantico": 0.5,
+    },
     "tokenizacion": {
         "longitud_minima_palabra": 2,
         "stopwords": [
@@ -90,7 +93,15 @@ def cargar_config(ruta=None) -> dict:
         print(f"Aviso: no se encontró '{ruta}', usando valores por defecto.", file=sys.stderr)
         return VALORES_POR_DEFECTO
 
-    with open(ruta, encoding="utf-8") as f:
-        contenido = yaml.load(f, Loader=_LoaderSinBoolsImplicitos) or {}
+    try:
+        with open(ruta, encoding="utf-8") as f:
+            contenido = yaml.load(f, Loader=_LoaderSinBoolsImplicitos) or {}
+    except yaml.YAMLError as e:
+        print(
+            f"Aviso: '{ruta}' tiene un error de sintaxis YAML, usando valores "
+            f"por defecto.\nDetalle: {e}",
+            file=sys.stderr,
+        )
+        return VALORES_POR_DEFECTO
 
     return _fusionar(VALORES_POR_DEFECTO, contenido)

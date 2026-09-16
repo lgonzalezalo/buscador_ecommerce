@@ -16,7 +16,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-import indexado.build_index as build_index
+import indexado.indexador as build_index
 
 
 FILAS_PRUEBA = [

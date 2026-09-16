@@ -39,7 +39,7 @@ def frase_establecida(negador: str, palabra: str, meta: list, contexto: set) -> 
     """
     variantes_palabra = variantes_stem(palabra)
     for row in meta:
-        nombre = row.get("nombre", "").lower()
+        nombre = quitar_acentos(row.get("nombre", "").lower())
         for variante in variantes_palabra:
             if f"{negador} {variante}" in nombre:
                 nombre_tokens = tokenizar(nombre)
